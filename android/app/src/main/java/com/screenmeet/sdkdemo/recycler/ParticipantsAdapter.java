@@ -13,7 +13,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.screenmeet.sdk.Identity;
 import com.screenmeet.sdk.Participant;
 import com.screenmeet.sdkdemo.R;
-import com.screenmeet.sdkdemo.databinding.PartcipantLayoutBinding;
+import com.screenmeet.sdkdemo.databinding.ParticipantLayoutBinding;
 
 import org.jetbrains.annotations.NotNull;
 import org.webrtc.EglBase;
@@ -44,7 +44,7 @@ public class ParticipantsAdapter extends RecyclerView.Adapter<ParticipantsAdapte
 
         recyclerSize = parent.getMeasuredWidth();
 
-        PartcipantLayoutBinding binding = PartcipantLayoutBinding.inflate(inflater);
+        ParticipantLayoutBinding binding = ParticipantLayoutBinding.inflate(inflater);
         binding.surfaceViewRenderer.init(eglBase.getEglBaseContext(), null);
         binding.surfaceViewRenderer.setZOrderMediaOverlay(true);
         binding.surfaceViewRenderer.setScalingType(RendererCommon.ScalingType.SCALE_ASPECT_FIT);

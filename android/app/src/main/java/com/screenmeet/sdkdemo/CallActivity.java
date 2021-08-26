@@ -2,8 +2,11 @@ package com.screenmeet.sdkdemo;
 
 import android.graphics.drawable.GradientDrawable;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.util.Log;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.ImageButton;
 
 import androidx.annotation.NonNull;
@@ -19,6 +22,7 @@ import com.screenmeet.sdkdemo.databinding.ActivityCallBinding;
 import com.screenmeet.sdkdemo.recycler.ParticipantsAdapter;
 
 import org.webrtc.EglBase;
+import org.webrtc.RendererCommon;
 import org.webrtc.VideoFrame;
 import org.webrtc.VideoSink;
 import org.webrtc.VideoTrack;
@@ -45,9 +49,29 @@ public class CallActivity extends AppCompatActivity {
 
         //The same eglContext as a capturing one should be used to preview camera
         EglBase.Context eglBaseContext = Objects.requireNonNull(ScreenMeet.getEglContext());
-        binding.activeSpeakerRenderer.surfaceViewRenderer.init(eglBaseContext, null);
         binding.localRenderer.surfaceViewRenderer.init(eglBaseContext, null);
+        binding.activeSpeakerRenderer.renderer.setZOrderOnTop(false);
+        binding.activeSpeakerRenderer.renderer.init(eglBaseContext, new RendererCommon.RendererEvents() {
+
+            @Override
+            public void onFirstFrameRendered() { }
+
+            @Override
+            public void onFrameResolutionChanged(int width, int height, int i2) {
+                new Handler(Looper.getMainLooper()).post(() -> {
+                    ViewGroup.LayoutParams layoutParams = binding.activeSpeakerRenderer.renderer.getLayoutParams();
+                    layoutParams.width = width;
+                    layoutParams.height = height;
+                    binding.activeSpeakerRenderer.zoomView.updateViewLayout(
+                            binding.activeSpeakerRenderer.renderer,
+                            layoutParams
+                    );
+
+                });
+            }
+        });
         binding.localRenderer.surfaceViewRenderer.setZOrderMediaOverlay(true);
+        binding.localRenderer.surfaceViewRenderer.setZOrderOnTop(true);
 
         setContentView(binding.getRoot());
     }
@@ -161,6 +185,7 @@ public class CallActivity extends AppCompatActivity {
         super.onResume();
         ScreenMeet.registerEventListener(eventListener);
 
+        binding.localRenderer.surfaceViewRenderer.clearImage();
         enableButtons();
         loadState();
     }
@@ -203,6 +228,7 @@ public class CallActivity extends AppCompatActivity {
     }
 
     private void sessionEnded(){
+        SupportApplication.stopListeningForeground();
         finish();
     }
 
@@ -304,8 +330,6 @@ public class CallActivity extends AppCompatActivity {
             binding.connectionLoss.setVisibility(View.GONE);
         } else  binding.connectionLoss.setVisibility(View.VISIBLE);
 
-        binding.localRenderer.nameTv.setText(R.string.me);
-
         boolean audioActive = ScreenMeet.localMediaState().isAudioActive();
         switchButton(binding.micro, false, audioActive);
         if(audioActive) {
@@ -378,7 +402,7 @@ public class CallActivity extends AppCompatActivity {
         if (videoTrack != null) {
             if(!participant.getMediaState().isVideoActive()){
                 participant.clearSinks();
-                binding.activeSpeakerRenderer.surfaceViewRenderer.clearImage();
+                binding.activeSpeakerRenderer.renderer.clearImage();
             } else updateTrack(videoTrack);
         }
     }
@@ -388,11 +412,11 @@ public class CallActivity extends AppCompatActivity {
         binding.activeSpeakerRenderer.hostImage.setVisibility(View.GONE);
         binding.activeSpeakerRenderer.microButton.setVisibility(View.GONE);
         binding.activeSpeakerRenderer.cameraButton.setVisibility(View.GONE);
-        binding.activeSpeakerRenderer.surfaceViewRenderer.clearImage();
+        binding.activeSpeakerRenderer.renderer.clearImage();
     }
 
     public void updateTrack(@NonNull VideoTrack videoTrackNew){
         videoTrackNew.setEnabled(true);
-        videoTrackNew.addSink(binding.activeSpeakerRenderer.surfaceViewRenderer);
+        videoTrackNew.addSink(binding.activeSpeakerRenderer.renderer);
     }
 }

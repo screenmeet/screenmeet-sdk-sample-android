@@ -55,32 +55,10 @@
         </LinearLayout>
 
         <TextView
-            android:id="@+id/sessionTv"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_below="@+id/sessionContainer"
-            android:textSize="34sp"/>
-
-        <TextView
-            android:id="@+id/connectionTv"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_below="@+id/sessionTv"
-            android:textSize="20sp"
-            android:gravity="center_vertical"/>
-
-        <TextView
-            android:id="@+id/sessionFeaturesTv"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_below="@+id/connectionTv"
-            android:textSize="16sp"/>
-
-        <TextView
             android:id="@+id/stateLabelTv"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_below="@+id/sessionFeaturesTv"
+            android:layout_below="@+id/sessionContainer"
             android:textSize="24dp"
             android:text="State:  "/>
 
@@ -94,17 +72,11 @@
             android:textSize="24sp" />
 
         <TextView
-            android:id="@+id/stateReasonTv"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_below="@+id/stateLabelTv"
-            android:textSize="16sp"/>
-
-        <TextView
             android:id="@+id/participantsLabelTv"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_below="@+id/stateReasonTv"
+            android:text="Participants: "
+            android:layout_below="@+id/stateTv"
             android:textSize="24sp"/>
 
         <TextView

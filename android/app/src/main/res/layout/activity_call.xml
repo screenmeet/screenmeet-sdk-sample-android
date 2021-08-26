@@ -6,7 +6,7 @@
 
     <include
         android:id="@+id/activeSpeakerRenderer"
-        layout="@layout/partcipant_layout"
+        layout="@layout/active_speaker_layout"
         android:layout_width="0dp"
         android:layout_height="0dp"
         app:layout_constraintBottom_toBottomOf="parent"
@@ -19,7 +19,7 @@
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/participantsRecycler"
         android:layout_width="0dp"
-        android:layout_height="0dp"
+        android:layout_height="wrap_content"
         android:layout_marginTop="32dp"
         android:padding="@dimen/marginStart"
         app:layout_constraintBottom_toTopOf="@+id/guideline"
@@ -113,7 +113,7 @@
 
         <include
             android:id="@+id/localRenderer"
-            layout="@layout/partcipant_layout"
+            layout="@layout/participant_layout"
             android:layout_width="135dp"
             android:layout_height="240dp"
             android:layout_marginStart="@dimen/button_padding"

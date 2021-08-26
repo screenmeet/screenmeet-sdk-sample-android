@@ -6,11 +6,18 @@ import android.content.Intent;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.os.Handler;
+import android.text.Editable;
+import android.view.LayoutInflater;
 import android.view.View;
+import android.view.WindowManager;
 import android.view.inputmethod.InputMethodManager;
+import android.widget.EditText;
+import android.widget.ImageView;
 
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 
+import com.screenmeet.sdk.Challenge;
 import com.screenmeet.sdk.CompletionError;
 import com.screenmeet.sdk.CompletionHandler;
 import com.screenmeet.sdk.ErrorCode;
@@ -22,9 +29,11 @@ import com.screenmeet.sdkdemo.databinding.ActivityMainBinding;
 import org.jetbrains.annotations.NotNull;
 import org.webrtc.VideoTrack;
 
+import java.util.ArrayList;
+
 import io.flutter.embedding.android.FlutterActivity;
 
-@SuppressWarnings("Convert2Lambda")
+@SuppressWarnings("CodeBlock2Expr")
 @SuppressLint("SetTextI18n")
 public class MainActivity extends AppCompatActivity {
 
@@ -32,136 +41,18 @@ public class MainActivity extends AppCompatActivity {
 
     private Handler handler;
 
-    private SessionEventListener eventListener;
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-
         binding = ActivityMainBinding.inflate(getLayoutInflater());
         View view = binding.getRoot();
         setContentView(view);
 
         enableButtons();
+        getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN);
+
         handler = new Handler();
-        eventListener = new SessionEventListener() {
-            @Override
-            public void onParticipantJoined(@NotNull Participant participant) {
-
-            }
-
-            @Override
-            public void onParticipantLeft(@NotNull Participant participant) {
-
-            }
-
-            @Override
-            public void onParticipantMediaStateChanged(@NotNull Participant participant) {
-
-            }
-
-            @Override
-            public void onLocalVideoCreated(@NotNull VideoTrack videoTrack) {
-            }
-
-            @Override
-            public void onLocalVideoStopped() {
-
-            }
-
-            @Override
-            public void onLocalAudioCreated() {
-
-            }
-
-            @Override
-            public void onLocalAudioStopped() {
-
-            }
-
-            @Override
-            public void onActiveSpeakerChanged(@NotNull Participant participant) {
-
-            }
-
-            @Override
-            public void onConnectionStateChanged(@NotNull ScreenMeet.ConnectionState connectionState) {
-                switch (connectionState.getState()){
-                    case CONNECTED:
-                        showSessionConnected();
-                        break;
-                    case CONNECTING:
-                    case RECONNECTING:
-                        break;
-                    case DISCONNECTED:
-                        showSessionFailure();
-                        break;
-                }
-            }
-        };
-
         handler.post(mockUiUpdate);
-    }
-
-    private void enableButtons(){
-        binding.connectBtn.setOnClickListener(v -> {
-            String code = binding.codeEt.getText().toString();
-            connectSession(code);
-        });
-
-        binding.disconnectBtn.setOnClickListener(v -> ScreenMeet.disconnect());
-        binding.navigateToWebView.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                startActivity(new Intent(MainActivity.this, WebViewActivity.class));
-            }
-        });
-        binding.confidentialityDemoBtn.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                startActivity(new Intent(MainActivity.this, ConfidentialityActivity.class));
-            }
-        });
-        binding.flutterFragmentDemoBtn.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                startActivity(new Intent(MainActivity.this, CombinedFragmentActivity.class));
-            }
-        });
-        binding.flutterActivityDemoBtn.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                startActivity(FlutterActivity.createDefaultIntent(MainActivity.this));
-            }
-        });
-        binding.reactActivityDemoBtn.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                startActivity(new Intent(MainActivity.this, ReactNativeActivity.class));
-            }
-        });
-        binding.callActivityDemoBtn.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                startActivity(new Intent(MainActivity.this, CallActivity.class));
-            }
-        });
-    }
-
-    private void connectSession(String code){
-        showProgress();
-        ScreenMeet.connect(code, new CompletionHandler() {
-            @Override
-            public void onSuccess() {
-                ScreenMeet.shareScreen();
-                ScreenMeet.shareAudio();
-            }
-
-            @Override
-            public void onFailure(@NotNull CompletionError completionError) {
-                showSessionFailure(completionError.getCode(), completionError.getMessage());
-            }
-        });
     }
 
     @Override
@@ -174,85 +65,82 @@ public class MainActivity extends AppCompatActivity {
     protected void onResume() {
         super.onResume();
         ScreenMeet.registerEventListener(eventListener);
-        ScreenMeet.SessionState connectionState = ScreenMeet.connectionState().getState();
-        switch (connectionState){
-            case CONNECTED:
-                ScreenMeet.registerEventListener(eventListener);
-                showSessionConnected();
-                break;
-            case CONNECTING:
-            case RECONNECTING:
-                break;
-            case DISCONNECTED:
-                showSessionFailure();
-                break;
-        }
+        ScreenMeet.SessionState sessionState = ScreenMeet.connectionState().getState();
+        displayConnectionState(sessionState);
     }
 
-    private void showSessionConnected(){
-        binding.connectBtn.setVisibility(View.GONE);
-        binding.disconnectBtn.setVisibility(View.VISIBLE);
-        binding.resultTv.setVisibility(View.GONE);
-        binding.connectProgress.setVisibility(View.GONE);
-
-        binding.mockView.setVisibility(View.VISIBLE);
-
-        binding.navigateToWebView.setVisibility(View.VISIBLE);
-        binding.confidentialityDemoBtn.setVisibility(View.VISIBLE);
-        binding.flutterFragmentDemoBtn.setVisibility(View.VISIBLE);
-        binding.flutterActivityDemoBtn.setVisibility(View.VISIBLE);
-        binding.reactActivityDemoBtn.setVisibility(View.VISIBLE);
-        binding.callActivityDemoBtn.setVisibility(View.VISIBLE);
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        eventListener = null;
+        mockUiUpdate = null;
     }
 
-    private void showSessionFailure(){
-        binding.connectBtn.setVisibility(View.VISIBLE);
-        binding.disconnectBtn.setVisibility(View.GONE);
-
-        binding.connectProgress.setVisibility(View.GONE);
-
-        binding.resultTv.setVisibility(View.GONE);
-        binding.connectionTv.setVisibility(View.GONE);
-
-        binding.sessionTv.setVisibility(View.GONE);
-        binding.sessionFeaturesTv.setVisibility(View.GONE);
-
-        binding.stateLabelTv.setVisibility(View.GONE);
-        binding.stateTv.setVisibility(View.GONE);
-        binding.stateReasonTv.setVisibility(View.GONE);
-
-        binding.participantsLabelTv.setVisibility(View.GONE);
-        binding.participantsTv.setVisibility(View.GONE);
-
-        binding.mockView.setVisibility(View.GONE);
-
-        binding.navigateToWebView.setVisibility(View.GONE);
-        binding.confidentialityDemoBtn.setVisibility(View.GONE);
-        binding.flutterFragmentDemoBtn.setVisibility(View.GONE);
-        binding.flutterActivityDemoBtn.setVisibility(View.GONE);
-        binding.reactActivityDemoBtn.setVisibility(View.GONE);
-        binding.callActivityDemoBtn.setVisibility(View.GONE);
+    private void enableButtons(){
+        binding.connectBtn.setOnClickListener(v -> {
+            String code = binding.codeEt.getText().toString();
+            connectSession(code);
+        });
+        binding.disconnectBtn.setOnClickListener(v -> ScreenMeet.disconnect());
+        binding.navigateToWebView.setOnClickListener(v -> {
+            startActivity(new Intent(MainActivity.this, WebViewActivity.class));
+        });
+        binding.confidentialityDemoBtn.setOnClickListener(v -> {
+            startActivity(new Intent(MainActivity.this, ConfidentialityActivity.class));
+        });
+        binding.flutterFragmentDemoBtn.setOnClickListener(v -> {
+            startActivity(new Intent(MainActivity.this, CombinedFragmentActivity.class));
+        });
+        binding.flutterActivityDemoBtn.setOnClickListener(v -> {
+            startActivity(FlutterActivity.createDefaultIntent(MainActivity.this));
+        });
+        binding.reactActivityDemoBtn.setOnClickListener(v ->  {
+            startActivity(new Intent(MainActivity.this, ReactNativeActivity.class));
+        });
+        binding.callActivityDemoBtn.setOnClickListener(v -> {
+            SupportApplication.instance.widget.hideFloatingWidget();
+            startActivity(new Intent(MainActivity.this, CallActivity.class));
+        });
     }
 
-    private void showSessionFailure(ErrorCode errorCode, String error){
-        showSessionFailure();
-
-        binding.resultTv.setTextColor(Color.RED);
-        String errorText = errorCode + " " + error;
-        binding.resultTv.setText(errorText);
-        binding.resultTv.setVisibility(View.VISIBLE);
-    }
-
-    private void showProgress(){
-        binding.resultTv.setVisibility(View.GONE);
-        binding.connectProgress.setVisibility(View.VISIBLE);
-        View view = this.getCurrentFocus();
-        if (view != null) {
-            InputMethodManager imm = (InputMethodManager)getSystemService(Context.INPUT_METHOD_SERVICE);
-            if (imm != null) {
-                imm.hideSoftInputFromWindow(view.getWindowToken(), 0);
+    private void connectSession(String code){
+        ScreenMeet.connect(code, new CompletionHandler() {
+            @Override
+            public void onSuccess() {
+                SupportApplication.startListeningForeground();
+                ScreenMeet.shareScreen();
+                ScreenMeet.shareAudio();
             }
-        }
+
+            @Override
+            public void onFailure(@NotNull CompletionError completionError) {
+                if(completionError.getCode() == ErrorCode.CAPTCHA_ERROR){
+                    Challenge challenge = completionError.getChallenge();
+                    if (challenge != null) showCaptchaDialog(challenge);
+                } else if(completionError.getCode() == ErrorCode.KNOCK_PERMISSION_TIMEOUT){
+                    binding.resultTv.setText(getString(R.string.waiting_for_knock));
+                } else showSessionFailure(completionError.getCode(), completionError.getMessage());
+            }
+        });
+    }
+
+    private void showCaptchaDialog(Challenge challenge){
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        LayoutInflater inflater = getLayoutInflater();
+        View view = inflater.inflate(R.layout.captcha_dialog, null);
+        builder.setTitle(R.string.captcha_not_robot)
+                .setCancelable(true)
+                .setView(view)
+                .setPositiveButton(android.R.string.yes, (dialog, id) -> {
+                    Editable text = ((EditText) view.findViewById(R.id.captchaEdit)).getText();
+                    challenge.solve(text.toString());
+                }).setNegativeButton(android.R.string.no, (dialog, id) -> challenge.solve(""))
+                .setOnCancelListener(dialog -> challenge.solve(""))
+                .create()
+                .show();
+
+        ImageView imageView = view.findViewById(R.id.captchaImage);
+        imageView.setImageBitmap(challenge.getChallenge());
     }
 
     private Runnable mockUiUpdate = new Runnable() {
@@ -267,11 +155,125 @@ public class MainActivity extends AppCompatActivity {
         }
     };
 
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
+    private SessionEventListener eventListener = new SessionEventListener() {
+        @Override
+        public void onParticipantJoined(@NotNull Participant participant) {
+            updateParticipants();
+        }
 
-        eventListener = null;
-        mockUiUpdate = null;
+        @Override
+        public void onParticipantLeft(@NotNull Participant participant) {
+            updateParticipants();
+        }
+
+        @Override
+        public void onParticipantMediaStateChanged(@NotNull Participant participant) {
+            VideoTrack videoTrack = participant.getVideoTrack();
+            if(videoTrack != null) {
+                SupportApplication.instance.widget.showFloatingWidget(MainActivity.this, videoTrack);
+            } else SupportApplication.instance.widget.hideFloatingWidget();
+        }
+
+        @Override
+        public void onLocalVideoCreated(@NotNull VideoTrack videoTrack) {
+        }
+
+        @Override
+        public void onLocalVideoStopped() {
+
+        }
+
+        @Override
+        public void onLocalAudioCreated() {
+
+        }
+
+        @Override
+        public void onLocalAudioStopped() {
+
+        }
+
+        @Override
+        public void onActiveSpeakerChanged(@NotNull Participant participant) {
+
+        }
+
+        @Override
+        public void onConnectionStateChanged(@NotNull ScreenMeet.ConnectionState connectionState) {
+            displayConnectionState(connectionState.getState());
+        }
+    };
+
+    private void displayConnectionState(@NotNull ScreenMeet.SessionState sessionState){
+        binding.stateLabelTv.setVisibility(View.GONE);
+        binding.stateTv.setVisibility(View.GONE);
+
+        boolean connected = sessionState == ScreenMeet.SessionState.CONNECTED;
+
+        binding.connectBtn.setVisibility(connected ? View.GONE : View.VISIBLE);
+        binding.disconnectBtn.setVisibility(connected ? View.VISIBLE : View.GONE);
+        binding.resultTv.setVisibility(View.GONE);
+        binding.connectProgress.setVisibility(View.GONE);
+        binding.mockView.setVisibility(connected ? View.VISIBLE : View.GONE);
+
+        binding.navigateToWebView.setVisibility(connected ? View.VISIBLE : View.GONE);
+        binding.confidentialityDemoBtn.setVisibility(connected ? View.VISIBLE : View.GONE);
+        binding.flutterFragmentDemoBtn.setVisibility(connected ? View.VISIBLE : View.GONE);
+        binding.flutterActivityDemoBtn.setVisibility(connected ? View.VISIBLE : View.GONE);
+        binding.reactActivityDemoBtn.setVisibility(connected ? View.VISIBLE : View.GONE);
+        binding.callActivityDemoBtn.setVisibility(connected ? View.VISIBLE : View.GONE);
+
+        binding.stateLabelTv.setVisibility(View.VISIBLE);
+        binding.stateTv.setVisibility(View.VISIBLE);
+        binding.stateTv.setText(sessionState.toString());
+
+        binding.participantsLabelTv.setVisibility(connected ? View.VISIBLE : View.GONE);
+        binding.participantsTv.setVisibility(connected ? View.VISIBLE : View.GONE);
+
+        switch (sessionState){
+            case CONNECTED:
+                binding.stateTv.setTextColor(Color.GREEN);
+                updateParticipants();
+                break;
+            case CONNECTING:
+                hideKeyboardInput();
+                binding.stateTv.setTextColor(Color.YELLOW);
+                binding.connectProgress.setVisibility(View.VISIBLE);
+                break;
+            case RECONNECTING:
+                binding.stateTv.setTextColor(Color.YELLOW);
+                break;
+            case DISCONNECTED:
+                SupportApplication.stopListeningForeground();
+                SupportApplication.instance.widget.hideFloatingWidget();
+                binding.stateTv.setTextColor(Color.RED);
+                break;
+        }
+    }
+
+    private void showSessionFailure(ErrorCode errorCode, String error){
+        displayConnectionState(ScreenMeet.SessionState.DISCONNECTED);
+
+        binding.resultTv.setTextColor(Color.RED);
+        String errorText = errorCode + " " + error;
+        binding.resultTv.setText(errorText);
+        binding.resultTv.setVisibility(View.VISIBLE);
+    }
+
+    private void updateParticipants(){
+        ArrayList<Participant> participants = ScreenMeet.participants();
+        StringBuilder participantsString = new StringBuilder();
+        for (Participant participant : participants) {
+            participantsString.append(participant.getIdentity().getName()).append("\n");
+        }
+        binding.participantsTv.setText(participantsString.toString());
+    }
+
+    private void hideKeyboardInput(){
+        View view = this.getCurrentFocus();
+        if (view != null) {
+            InputMethodManager imm = (InputMethodManager)getSystemService(Context.INPUT_METHOD_SERVICE);
+            if (imm != null) imm.hideSoftInputFromWindow(view.getWindowToken(), 0);
+        }
     }
 }
